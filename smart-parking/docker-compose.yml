@@ -1,0 +1,25 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: smart-parking-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  nodered:
+    build: ./nodered          # nodered/node-red + node-red-dashboard
+    container_name: smart-parking-nodered
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=UTC
+      - MQTT_HOST=mosquitto   # broker host used by the MQTT nodes in flows.json
+    volumes:
+      - ./nodered/data:/data  # flows.json ir kontekstas išlieka perkrovus
+    depends_on:
+      - mosquitto
+    restart: unless-stopped

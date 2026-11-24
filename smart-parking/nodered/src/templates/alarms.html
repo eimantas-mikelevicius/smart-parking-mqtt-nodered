@@ -1,0 +1,19 @@
+<style>
+  .al-none { color:#2e7d32; font-weight:600; padding:4px 0; }
+  .al-row { padding:6px 10px; border-radius:6px; margin-bottom:5px; color:#fff; font-size:14px; }
+  .al-row.critical { background:#c62828; } .al-row.warning { background:#ef6c00; }
+  .al-row small { opacity:.9; }
+  .al-log { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+  .al-log td { padding:3px 6px; border-bottom:1px solid #eee; }
+  .al-log .RAISED { color:#c62828; font-weight:600; } .al-log .CLEARED { color:#2e7d32; font-weight:600; }
+</style>
+<div ng-if="msg.payload" style="max-height:470px;overflow-y:auto">
+  <div class="al-none" ng-if="!msg.payload.alarms.length">No active alarms</div>
+  <div class="al-row" ng-class="a.sev" ng-repeat="a in msg.payload.alarms">
+    <b>{{a.sev == 'critical' ? 'ALARM' : 'WARNING'}}</b> &nbsp; {{a.text}} <small>&nbsp; (since {{a.since}})</small>
+  </div>
+  <div style="font-size:12px;color:#666;margin-top:8px" ng-if="msg.payload.alarmLog.length">Alarm history (latest first)</div>
+  <table class="al-log">
+    <tr ng-repeat="l in msg.payload.alarmLog"><td>{{l.time}}</td><td ng-class="l.event">{{l.event}}</td><td>{{l.text}}</td></tr>
+  </table>
+</div>

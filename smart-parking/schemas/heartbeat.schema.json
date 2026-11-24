@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "uniwa/iot/ice26390276/parking/heartbeat.schema.json",
+  "title": "Sensor heartbeat message",
+  "type": "object",
+  "required": ["device_id", "zone", "type", "battery", "unit", "ts", "seq"],
+  "additionalProperties": true,
+  "properties": {
+    "device_id": { "type": "string", "pattern": "^[A-Z]-[0-9]{2}$" },
+    "zone":      { "type": "string", "pattern": "^[A-Z]$" },
+    "type":      { "type": "string", "enum": ["heartbeat"] },
+    "battery":   { "type": "number", "minimum": 0, "maximum": 100 },
+    "unit":      { "type": "string", "enum": ["%"] },
+    "ts":        { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "seq":       { "type": "integer", "minimum": 0 }
+  }
+}

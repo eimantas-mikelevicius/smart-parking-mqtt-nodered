@@ -1,0 +1,53 @@
+<style>
+  .sp-top { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:#555; margin-bottom:8px; }
+  .sp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .sp-kpi { border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fafafa; }
+  .sp-kpi .t { font-size:12px; color:#666; }
+  .sp-kpi .v { font-size:26px; font-weight:600; line-height:1.2; }
+  .sp-kpi .s { font-size:12px; color:#777; }
+  .sp-bar { height:6px; border-radius:3px; background:#e0e0e0; overflow:hidden; margin-top:6px; }
+  .sp-bar > i { display:block; height:100%; background:#2e7d32; }
+  .sp-bar.hi > i { background:#ef6c00; } .sp-bar.full > i { background:#c62828; }
+  .sp-ok { color:#2e7d32; } .sp-bad { color:#c62828; }
+</style>
+<div ng-if="msg.payload">
+  <div class="sp-top">
+    <span>Simulated time (UTC): <b>{{msg.payload.simTime}}</b></span>
+    <span>Simulator:
+      <b ng-class="msg.payload.gateway=='online' ? 'sp-ok' : (msg.payload.gateway=='offline' ? 'sp-bad' : '')">{{msg.payload.gateway}}</b></span>
+  </div>
+  <div class="sp-grid">
+    <div class="sp-kpi" ng-repeat="z in msg.payload.zones">
+      <div class="t">Zone {{z.zone}} - free spots</div>
+      <div class="v">{{z.free}} <small style="font-size:14px;color:#777">/ {{z.total}}</small></div>
+      <div class="s">occupancy {{z.pct | number:0}} % <span ng-if="z.offline">&middot; {{z.offline}} offline</span></div>
+      <div class="sp-bar" ng-class="{hi: z.pct > 90, full: z.pct >= 100}"><i ng-style="{width: z.pct + '%'}"></i></div>
+    </div>
+    <div class="sp-kpi">
+      <div class="t">Total - free spots</div>
+      <div class="v">{{msg.payload.total.free}} <small style="font-size:14px;color:#777">/ {{msg.payload.total.total}}</small></div>
+      <div class="s">occupancy {{msg.payload.total.pct | number:0}} % <span ng-if="msg.payload.total.offline">&middot; {{msg.payload.total.offline}} offline</span></div>
+      <div class="sp-bar" ng-class="{hi: msg.payload.total.pct > 90, full: msg.payload.total.pct >= 100}"><i ng-style="{width: msg.payload.total.pct + '%'}"></i></div>
+    </div>
+    <div class="sp-kpi">
+      <div class="t">Average parking duration</div>
+      <div class="v">{{msg.payload.stats.avgStay | number:1}} <small style="font-size:14px;color:#777">min</small></div>
+      <div class="s">{{msg.payload.stats.stays}} completed stays</div>
+    </div>
+    <div class="sp-kpi">
+      <div class="t">Cars turned away</div>
+      <div class="v" ng-class="{'sp-bad': msg.payload.stats.turnedAway > 0}">{{msg.payload.stats.turnedAway}}</div>
+      <div class="s">parking was full</div>
+    </div>
+    <div class="sp-kpi">
+      <div class="t">Valid messages</div>
+      <div class="v sp-ok">{{msg.payload.counters.valid}}</div>
+      <div class="s">{{msg.payload.counters.flickers}} flickers ignored</div>
+    </div>
+    <div class="sp-kpi">
+      <div class="t">Rejected messages</div>
+      <div class="v" ng-class="{'sp-bad': msg.payload.counters.rejected > 0}">{{msg.payload.counters.rejected}}</div>
+      <div class="s">last minute: {{msg.payload.counters.winRate | number:1}} % invalid</div>
+    </div>
+  </div>
+</div>

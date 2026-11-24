@@ -1,0 +1,844 @@
+[
+  {
+    "id": "tab_parking",
+    "type": "tab",
+    "label": "Smart Parking",
+    "disabled": false,
+    "info": "Smart parking monitoring: validation -> processing -> dashboard + alarms.\nConfiguration: Flow properties -> Environment Variables.",
+    "env": [
+      {
+        "name": "TOPIC_PREFIX",
+        "value": "uniwa/iot/ice26390276/parking",
+        "type": "str"
+      },
+      {
+        "name": "KNOWN_ZONES",
+        "value": "A,B",
+        "type": "str"
+      },
+      {
+        "name": "SPOTS_PER_ZONE",
+        "value": "10",
+        "type": "str"
+      },
+      {
+        "name": "TIME_MODE",
+        "value": "sim",
+        "type": "str"
+      },
+      {
+        "name": "HEARTBEAT_INTERVAL_SEC",
+        "value": "60",
+        "type": "str"
+      },
+      {
+        "name": "OFFLINE_INTERVALS",
+        "value": "3",
+        "type": "str"
+      },
+      {
+        "name": "BATTERY_LOW_PCT",
+        "value": "15",
+        "type": "str"
+      },
+      {
+        "name": "ZONE_FULL_PCT",
+        "value": "100",
+        "type": "str"
+      },
+      {
+        "name": "ZONE_ALMOST_FULL_PCT",
+        "value": "90",
+        "type": "str"
+      },
+      {
+        "name": "ERROR_RATE_PCT",
+        "value": "10",
+        "type": "str"
+      },
+      {
+        "name": "ERROR_WINDOW_SEC",
+        "value": "60",
+        "type": "str"
+      },
+      {
+        "name": "ERROR_MIN_MSGS",
+        "value": "10",
+        "type": "str"
+      },
+      {
+        "name": "FLICKER_SEC",
+        "value": "10",
+        "type": "str"
+      },
+      {
+        "name": "FLICKER_HOLD_MS",
+        "value": "1000",
+        "type": "str"
+      },
+      {
+        "name": "TS_FUTURE_TOL_SEC",
+        "value": "120",
+        "type": "str"
+      },
+      {
+        "name": "TS_MAX_AGE_SEC",
+        "value": "600",
+        "type": "str"
+      },
+      {
+        "name": "ALARM_HOLD_SEC",
+        "value": "8",
+        "type": "str"
+      },
+      {
+        "name": "CHART_STEP_SEC",
+        "value": "300",
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "id": "mqtt_broker",
+    "type": "mqtt-broker",
+    "name": "Mosquitto",
+    "broker": "${MQTT_HOST}",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "closeTopic": "",
+    "willTopic": ""
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_state",
+    "type": "mqtt in",
+    "name": "state  (QoS1, retained)",
+    "topic": "uniwa/iot/ice26390276/parking/+/+/state",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "mqtt_broker",
+    "nl": false,
+    "rap": false,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "prep_state"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_hb",
+    "type": "mqtt in",
+    "name": "heartbeat",
+    "topic": "uniwa/iot/ice26390276/parking/+/+/heartbeat",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "mqtt_broker",
+    "nl": false,
+    "rap": false,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 180,
+    "wires": [
+      [
+        "prep_hb"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_stats",
+    "type": "mqtt in",
+    "name": "stats",
+    "topic": "uniwa/iot/ice26390276/parking/stats",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "mqtt_broker",
+    "nl": false,
+    "rap": false,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 280,
+    "wires": [
+      [
+        "sg"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_gw",
+    "type": "mqtt in",
+    "name": "gateway/status (LWT)",
+    "topic": "uniwa/iot/ice26390276/parking/gateway/status",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "mqtt_broker",
+    "nl": false,
+    "rap": false,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 340,
+    "wires": [
+      [
+        "sg"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "prep_state",
+    "type": "function",
+    "name": "1a. attach state schema",
+    "func": "// Stage 1a: attach the JSON Schema; keep the raw text for the error log.\nmsg.raw = msg.payload;\nmsg.kind = \"state\";\nmsg.schema = {\"$schema\":\"http://json-schema.org/draft-06/schema#\",\"$id\":\"uniwa/iot/ice26390276/parking/state.schema.json\",\"title\":\"Parking spot occupancy (state) message\",\"type\":\"object\",\"required\":[\"device_id\",\"zone\",\"type\",\"value\",\"unit\",\"ts\",\"seq\"],\"additionalProperties\":true,\"properties\":{\"device_id\":{\"type\":\"string\",\"pattern\":\"^[A-Z]-[0-9]{2}$\"},\"zone\":{\"type\":\"string\",\"pattern\":\"^[A-Z]$\"},\"type\":{\"type\":\"string\",\"enum\":[\"occupancy\"]},\"value\":{\"type\":\"integer\",\"enum\":[0,1]},\"unit\":{\"type\":\"string\",\"enum\":[\"bool\"]},\"ts\":{\"type\":\"string\",\"pattern\":\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$\"},\"seq\":{\"type\":\"integer\",\"minimum\":0}}};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 100,
+    "wires": [
+      [
+        "json_state"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "prep_hb",
+    "type": "function",
+    "name": "1b. attach heartbeat schema",
+    "func": "// Stage 1b: attach the JSON Schema; keep the raw text for the error log.\nmsg.raw = msg.payload;\nmsg.kind = \"heartbeat\";\nmsg.schema = {\"$schema\":\"http://json-schema.org/draft-06/schema#\",\"$id\":\"uniwa/iot/ice26390276/parking/heartbeat.schema.json\",\"title\":\"Sensor heartbeat message\",\"type\":\"object\",\"required\":[\"device_id\",\"zone\",\"type\",\"battery\",\"unit\",\"ts\",\"seq\"],\"additionalProperties\":true,\"properties\":{\"device_id\":{\"type\":\"string\",\"pattern\":\"^[A-Z]-[0-9]{2}$\"},\"zone\":{\"type\":\"string\",\"pattern\":\"^[A-Z]$\"},\"type\":{\"type\":\"string\",\"enum\":[\"heartbeat\"]},\"battery\":{\"type\":\"number\",\"minimum\":0,\"maximum\":100},\"unit\":{\"type\":\"string\",\"enum\":[\"%\"]},\"ts\":{\"type\":\"string\",\"pattern\":\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$\"},\"seq\":{\"type\":\"integer\",\"minimum\":0}}};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 180,
+    "wires": [
+      [
+        "json_hb"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "json_state",
+    "type": "json",
+    "name": "syntax + JSON Schema",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 620,
+    "y": 100,
+    "wires": [
+      [
+        "validate"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "json_hb",
+    "type": "json",
+    "name": "syntax + JSON Schema",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 620,
+    "y": 180,
+    "wires": [
+      [
+        "validate"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "catch_json",
+    "type": "catch",
+    "name": "schema / syntax errors",
+    "scope": [
+      "json_state",
+      "json_hb"
+    ],
+    "uncaught": false,
+    "x": 620,
+    "y": 240,
+    "wires": [
+      [
+        "reject"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "validate",
+    "type": "function",
+    "name": "2. topic / seq / timestamp checks",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Stage 2: semantic validation (JSON syntax + JSON Schema were already checked by the JSON node).\n// Output 1 = valid message, output 2 = invalid message (-> rejection flow).\nconst p = msg.payload;\nconst rest = msg.topic.startsWith(CFG.PREFIX + \"/\") ? msg.topic.slice(CFG.PREFIX.length + 1).split(\"/\") : [];\nconst tZone = rest[0], tSpot = rest[1];\n\nfunction reject(reason, detail) { msg.reason = reason; msg.detail = detail; return [null, msg]; }\n\n// 1) unknown zone\nif (!CFG.ZONES.includes(p.zone))\n  return reject(\"unknown_zone\", `zone \"${p.zone}\" is not one of [${CFG.ZONES.join(\",\")}]`);\n\n// 2) topic consistency: device_id and zone must equal the ones in the topic\nif (p.device_id !== tSpot || p.zone !== tZone)\n  return reject(\"topic_mismatch\", `payload ${p.zone}/${p.device_id} <> topic ${tZone}/${tSpot}`);\n\n// 3) duplicates / out-of-order: seq must increase per device\nconst lastSeq = flow.get(\"lastSeq\") || {};\nconst last = lastSeq[p.device_id];\nif (last !== undefined && p.seq <= last) {\n  if (msg.retain) return [null, null];        // replay of an already processed retained message -> silently ignore\n  return reject(\"duplicate_seq\", `seq ${p.seq} <= last accepted ${last}`);\n}\n\n// 4) plausibility of the timestamp (reference clock = latest simulated time seen, or wall clock in TIME_MODE=wall)\nconst t = Date.parse(p.ts);\nif (isNaN(t)) return reject(\"bad_timestamp\", `cannot parse \"${p.ts}\"`);\nlet simNow = flow.get(\"simNow\");\nconst ref = CFG.WALL ? Date.now() : simNow;\nif (ref != null) {\n  // retained messages describe an older state and may be newer than a still-empty clock\n  if ((CFG.WALL || !msg.retain) && t > ref + CFG.FUT)\n    return reject(\"ts_future\", `ts ${p.ts} is ${Math.round((t - ref) / 1000)} s ahead of the clock`);\n  if (!msg.retain && t < ref - CFG.AGE)\n    return reject(\"ts_too_old\", `ts ${p.ts} is ${Math.round((ref - t) / 1000)} s behind the clock`);\n}\n\n// ---- message accepted ----\nlastSeq[p.device_id] = p.seq;\nflow.set(\"lastSeq\", lastSeq);\nif (!CFG.WALL && (simNow == null || t > simNow)) { simNow = t; flow.set(\"simNow\", t); }\n// start of the observation: first LIVE message (retained replays carry old timestamps)\nif (flow.get(\"runStart\") == null && !msg.retain) flow.set(\"runStart\", CFG.WALL ? Date.now() : t);\n\nconst win = flow.get(\"win\") || [];          // [stamp, isInvalid] entries for the error-rate alarm\nwin.push([CFG.WALL ? Date.now() : simNow, 0]);\nflow.set(\"win\", win);\n\nmsg.simTs = t;\nreturn [msg, null];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 880,
+    "y": 140,
+    "wires": [
+      [
+        "process"
+      ],
+      [
+        "reject"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "process",
+    "type": "function",
+    "name": "3. process valid (flicker, battery, durations)",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Processing of VALID messages: spot state, flicker filter, heartbeat / battery, parking durations.\nconst timers = context.get(\"timers\") || {};      // per-device pending (debounced) state change\ncontext.set(\"timers\", timers);\n\nif (msg.reset) {                                 // new simulator session: drop pending changes\n  for (const k of Object.keys(timers)) { clearTimeout(timers[k].timer); delete timers[k]; }\n  return null;\n}\n\nfunction commitSpot(id, value, ts) {             // apply a confirmed state change\n  const sp = flow.get(\"spots\") || {};\n  const d = flow.get(\"dur\") || { n: 0, sum: 0 };\n  const x = sp[id]; if (!x) return;\n  if (value === 1) x.since = ts;\n  else if (x.occupied === 1 && x.since != null) { d.n++; d.sum += (ts - x.since) / 60000; x.since = null; } // stay in minutes\n  x.occupied = value; x.lastChangeSim = ts;\n  flow.set(\"spots\", sp); flow.set(\"dur\", d);\n}\n\nconst p = msg.payload, t = msg.simTs, id = p.device_id;\nconst cnt = flow.get(\"cnt\") || { valid: 0, rejected: 0, flickers: 0, byReason: {} };\ncnt.valid++;\n\nconst spots = flow.get(\"spots\") || {};\nif (!spots[id]) spots[id] = newSpot(id, p.zone);\n\nif (msg.kind === \"heartbeat\") {\n  spots[id].battery = p.battery;\n  spots[id].lastHbSim = t;\n  flow.set(\"spots\", spots); flow.set(\"cnt\", cnt);\n  return { trigger: true };\n}\n\n// ---- occupancy state message ----\nflow.set(\"spots\", spots);\nconst cur = spots[id].occupied, v = p.value, pend = timers[id];\n\nfunction schedule() {\n  timers[id] = { value: v, ts: t, timer: setTimeout(() => {   // confirm after the debounce time\n    const pd = timers[id]; if (!pd) return;\n    delete timers[id];\n    commitSpot(id, pd.value, pd.ts);\n    node.send({ trigger: true });\n  }, CFG.HOLD) };\n}\n\nif (cur === null && !pend) {\n  commitSpot(id, v, t);                          // first report of this sensor: accept immediately\n} else if (pend) {\n  clearTimeout(pend.timer); delete timers[id];\n  if (v !== pend.value && (t - pend.ts) <= CFG.FLICKER) {\n    cnt.flickers++;                              // change reversed within a few seconds => flicker, ignore both\n  } else {\n    commitSpot(id, pend.value, pend.ts);         // previous change was real\n    if (v !== pend.value) schedule();\n  }\n} else if (v !== cur) {\n  schedule();                                    // wait: may be a flicker\n}                                                // v === cur : repeated state, nothing changes\n\nflow.set(\"cnt\", cnt);\nreturn { trigger: true };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "const timers = context.get(\"timers\") || {};\nfor (const k of Object.keys(timers)) clearTimeout(timers[k].timer);\ncontext.set(\"timers\", {});\n",
+    "libs": [],
+    "x": 1190,
+    "y": 100,
+    "wires": [
+      [
+        "evaluate"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "sg",
+    "type": "function",
+    "name": "stats + gateway handler",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Handles <prefix>/stats and <prefix>/gateway/status.\n// Outputs: 1 -> evaluate, 2 -> rejection flow, 3 -> process (reset pending timers).\nfunction bad(reason, detail) { msg.reason = reason; msg.detail = detail; msg.raw = msg.payload; return [null, msg, null]; }\n\nlet o;\ntry { o = JSON.parse(msg.payload); } catch (e) { return bad(\"invalid_json\", e.message); }\nif (o === null || typeof o !== \"object\" || Array.isArray(o)) return bad(\"wrong_type\", \"payload is not an object\");\n\nconst cnt = flow.get(\"cnt\") || { valid: 0, rejected: 0, flickers: 0, byReason: {} };\nlet resetMsg = null;\n\nif (msg.topic === CFG.PREFIX + \"/gateway/status\") {\n  if (![\"online\", \"offline\"].includes(o.status)) return bad(\"schema_violation\", \"status must be online|offline\");\n  flow.set(\"gateway\", o.status);\n  if (o.status === \"online\") {\n    // A (re)started simulator restarts its sequence numbers and its simulated clock.\n    flow.set(\"lastSeq\", {}); flow.set(\"simNow\", null); flow.set(\"runStart\", null); flow.set(\"win\", []);\n    resetMsg = { reset: true };\n    if (!msg.retain) {                           // live message => fresh session, start statistics from scratch\n      cnt.valid = 0; cnt.rejected = 0; cnt.flickers = 0; cnt.byReason = {};\n      flow.set(\"rejected\", []); flow.set(\"dur\", { n: 0, sum: 0 });\n      flow.set(\"simStats\", { turnedAway: 0, avgSim: 0 });\n      const sp = flow.get(\"spots\") || {};\n      for (const k of Object.keys(sp)) sp[k] = newSpot(sp[k].id, sp[k].zone);\n      flow.set(\"spots\", sp);\n      flow.set(\"lastBucket\", null); flow.set(\"chartReset\", true);\n      flow.set(\"alarms\", {}); flow.set(\"alarmLog\", []);\n    }\n  }\n} else {                                         // stats\n  if (!Number.isInteger(o.turned_away) || o.turned_away < 0 || typeof o.avg_duration_min !== \"number\" || o.avg_duration_min < 0)\n    return bad(\"schema_violation\", \"turned_away must be integer >= 0, avg_duration_min number >= 0\");\n  flow.set(\"simStats\", { turnedAway: o.turned_away, avgSim: o.avg_duration_min });\n}\ncnt.valid++;\nflow.set(\"cnt\", cnt);\nreturn [{ trigger: true }, null, resetMsg];\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 310,
+    "wires": [
+      [
+        "evaluate"
+      ],
+      [
+        "reject"
+      ],
+      [
+        "process"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "reject",
+    "type": "function",
+    "name": "4. reject: classify, count, log",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Rejection flow: classify, count, log and publish every invalid message.\n// Output 1 -> MQTT <prefix>/errors, output 2 -> dashboard refresh.\nlet reason = msg.reason, detail = msg.detail;\nif (!reason) {                                   // message arrived from the catch node (JSON node failed)\n  const errs = msg.schemaError;\n  if (!errs) {\n    reason = \"invalid_json\";\n    detail = (msg.error && msg.error.message) || \"payload is not valid JSON\";\n  } else {\n    const kw = errs.map(e => e.keyword);\n    const e0 = errs[0];\n    if (kw.includes(\"required\")) {\n      reason = \"missing_field\";\n      detail = \"missing: \" + errs.filter(e => e.keyword === \"required\").map(e => e.params.missingProperty).join(\", \");\n    } else if (kw.includes(\"type\")) {\n      const e = errs.find(x => x.keyword === \"type\");\n      reason = \"wrong_type\"; detail = `${e.instancePath || \"payload\"} ${e.message}`;\n    } else if (kw.some(k => [\"enum\", \"minimum\", \"maximum\"].includes(k))) {\n      const e = errs.find(x => [\"enum\", \"minimum\", \"maximum\"].includes(x.keyword));\n      reason = \"out_of_range\"; detail = `${e.instancePath || \"payload\"} ${e.message}`;\n    } else {\n      reason = \"schema_violation\"; detail = `${e0.instancePath || \"payload\"} ${e0.message}`;\n    }\n  }\n}\nconst raw = msg.raw !== undefined ? msg.raw : msg.payload;\nconst rawStr = typeof raw === \"string\" ? raw : JSON.stringify(raw);\nconst simNow = flow.get(\"simNow\");\nconst ref = CFG.WALL ? Date.now() : simNow;\n\nconst cnt = flow.get(\"cnt\") || { valid: 0, rejected: 0, flickers: 0, byReason: {} };\ncnt.rejected++;\ncnt.byReason[reason] = (cnt.byReason[reason] || 0) + 1;\nflow.set(\"cnt\", cnt);\n\nconst rec = {\n  wall: new Date().toISOString(),\n  sim: ref != null ? new Date(ref).toISOString().replace(\"T\", \" \").slice(0, 19) : \"-\",\n  reason, detail: String(detail || \"\").slice(0, 160),\n  topic: msg.topic, payload: String(rawStr).slice(0, 160)\n};\nconst list = flow.get(\"rejected\") || [];\nlist.unshift(rec);\nif (list.length > 50) list.length = 50;\nflow.set(\"rejected\", list);\n\nif (ref != null) {                               // feeds the \"more than 10 % invalid in the last minute\" alarm\n  const win = flow.get(\"win\") || [];\n  win.push([ref, 1]);\n  flow.set(\"win\", win);\n}\n\nconst errMsg = {\n  topic: CFG.PREFIX + \"/errors\", qos: 1, retain: false,\n  payload: JSON.stringify({ reason, detail: rec.detail, source_topic: msg.topic, raw_payload: rec.payload,\n                            sim_time: rec.sim, rejected_at: rec.wall })\n};\nreturn [errMsg, { trigger: true }];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1190,
+    "y": 240,
+    "wires": [
+      [
+        "out_errors"
+      ],
+      [
+        "evaluate"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "out_errors",
+    "type": "mqtt out",
+    "name": "<prefix>/errors",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker",
+    "x": 1500,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "z": "tab_parking",
+    "id": "tick",
+    "type": "inject",
+    "name": "every 1 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 1190,
+    "y": 340,
+    "wires": [
+      [
+        "evaluate"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "init_inj",
+    "type": "inject",
+    "name": "on deploy",
+    "props": [],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.1",
+    "topic": "",
+    "x": 150,
+    "y": 420,
+    "wires": [
+      [
+        "init"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "init",
+    "type": "function",
+    "name": "pre-create spot list",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Runs on deploy: pre-create the spot list (state \"unknown\") so that the dashboard shows all spots immediately.\nconst spots = flow.get(\"spots\") || {};\nfor (const z of CFG.ZONES)\n  for (let i = 1; i <= CFG.PER_ZONE; i++) {\n    const id = `${z}-${String(i).padStart(2, \"0\")}`;\n    if (!spots[id]) spots[id] = newSpot(id, z);\n  }\nflow.set(\"spots\", spots);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 420,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "evaluate",
+    "type": "function",
+    "name": "5. evaluate: aggregates + alarms + snapshot",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Central evaluation: offline detection, per-zone aggregates, alarms, chart samples and the dashboard snapshot.\n// Triggered by every processed message and by a 1 s timer.\n// Output 1 = snapshot for the dashboard widgets, 2 = alarm events, 3 = chart samples.\nconst spots = flow.get(\"spots\") || {};\nconst cnt = flow.get(\"cnt\") || { valid: 0, rejected: 0, flickers: 0, byReason: {} };\nconst simStats = flow.get(\"simStats\") || { turnedAway: 0, avgSim: 0 };\nconst dur = flow.get(\"dur\") || { n: 0, sum: 0 };\nconst gateway = flow.get(\"gateway\") || \"unknown\";\nconst ref = CFG.WALL ? Date.now() : flow.get(\"simNow\");\nconst runStart = flow.get(\"runStart\");\nconst fmt = ms => new Date(ms).toISOString().replace(\"T\", \" \").slice(0, 19);\nconst r1 = x => Math.round(x * 10) / 10;\nconst chart = [];\nconst hist = flow.get(\"chartHist\") || [];           // occupancy history: [{t, v:{\"Zone A\":pct,...,\"Total\":pct}}]\nlet sendChart = false;\nif (flow.get(\"chartReset\")) { flow.set(\"chartReset\", false); hist.length = 0; sendChart = true; }   // new run -> clear chart\n\n// ---- 1) sensor offline detection: no heartbeat for OFFLINE_N consecutive intervals ----\nif (ref != null) {\n  const limit = CFG.OFFLINE_N * CFG.HB_SEC * 1000;\n  for (const s of Object.values(spots)) {\n    const base = s.lastHbSim != null ? s.lastHbSim : runStart;\n    s.offline = base != null && (ref - base) > limit;\n  }\n  flow.set(\"spots\", spots);\n}\n\n// ---- 2) aggregates per zone / total (offline sensors are excluded from the occupancy percentage) ----\nconst zones = {};\nconst mk = z => ({ zone: z, total: 0, free: 0, occupied: 0, offline: 0, unknown: 0, monitored: 0, pct: 0 });\nfor (const z of CFG.ZONES) zones[z] = mk(z);\nconst tot = mk(\"Total\");\nconst spotList = [];\nfor (const s of Object.values(spots)) {\n  const z = zones[s.zone] || (zones[s.zone] = mk(s.zone));\n  const state = s.offline ? \"offline\" : s.occupied === 1 ? \"occupied\" : s.occupied === 0 ? \"free\" : \"unknown\";\n  for (const a of [z, tot]) { a.total++; a[state]++; }\n  spotList.push({ id: s.id, zone: s.zone, state, battery: s.battery, since: s.since != null ? fmt(s.since) : null });\n}\nspotList.sort((a, b) => a.id.localeCompare(b.id));\nconst zoneArr = Object.values(zones).sort((a, b) => a.zone.localeCompare(b.zone));\nfor (const a of [...zoneArr, tot]) {\n  a.monitored = a.free + a.occupied;\n  a.pct = a.monitored ? r1(a.occupied / a.monitored * 100) : 0;\n}\n\n// ---- 3) invalid-message rate in the last minute (simulated time) ----\nlet win = flow.get(\"win\") || [];\nif (ref != null) win = win.filter(e => e[0] > ref - 2 * CFG.ERR_WIN);\nflow.set(\"win\", win);\nconst inWin = ref == null ? [] : win.filter(e => e[0] > ref - CFG.ERR_WIN);\nconst winBad = inWin.filter(e => e[1] === 1).length, winTot = inWin.length;\nconst winRate = winTot ? r1(winBad / winTot * 100) : 0;\n\n// ---- 4) alarms ----\nconst want = {};\nfor (const z of zoneArr) {\n  if (z.monitored === 0) continue;\n  if (z.pct >= CFG.FULL) want[\"zone_full:\" + z.zone] = { sev: \"critical\", text: `Zone ${z.zone} is FULL (${z.pct} %)` };\n  else if (z.pct > CFG.ALMOST) want[\"zone_almost:\" + z.zone] = { sev: \"warning\", text: `Zone ${z.zone} is almost full (${z.pct} %)` };\n}\nfor (const s of Object.values(spots)) {\n  if (s.offline) want[\"offline:\" + s.id] = { sev: \"critical\", text: `Sensor ${s.id} stopped reporting (no heartbeat for ${CFG.OFFLINE_N} intervals)` };\n  if (s.battery != null && s.battery < CFG.BATT_LOW) want[\"battery:\" + s.id] = { sev: \"warning\", text: `Battery of sensor ${s.id} is low (${s.battery} %)` };\n}\nif (winTot >= CFG.ERR_MIN && winRate > CFG.ERR_PCT)\n  want[\"error_rate\"] = { sev: \"critical\", text: `${winRate} % of the messages in the last minute are invalid (${winBad}/${winTot})` };\nif (gateway === \"offline\") want[\"gateway\"] = { sev: \"critical\", text: \"Simulator / gateway is offline\" };\n\nconst active = flow.get(\"alarms\") || {};\nconst log = flow.get(\"alarmLog\") || [];\nconst events = [];\nconst now = ref != null ? fmt(ref) : \"-\";\nfor (const k of Object.keys(want)) {\n  if (!active[k]) {\n    active[k] = { key: k, sev: want[k].sev, text: want[k].text, since: now };\n    log.unshift({ time: now, event: \"RAISED\", sev: want[k].sev, text: want[k].text });\n    events.push({ event: \"RAISED\", key: k, sev: want[k].sev, text: want[k].text, sim: now });\n  } else { active[k].text = want[k].text; }\n  active[k].seen = Date.now();                       // condition still true\n}\nfor (const k of Object.keys(active)) {\n  if (!want[k] && Date.now() - (active[k].seen || 0) >= CFG.ALARM_HOLD) {   // latch: avoids flapping, keeps the alarm visible\n    log.unshift({ time: now, event: \"CLEARED\", sev: \"ok\", text: active[k].text });\n    events.push({ event: \"CLEARED\", key: k, sev: \"ok\", text: active[k].text, sim: now });\n    delete active[k];\n  }\n}\nif (log.length > 60) log.length = 60;\nflow.set(\"alarms\", active); flow.set(\"alarmLog\", log);\n\n// ---- 5) occupancy chart: one sample every CHART_STEP seconds of (simulated) time ----\n// The chart is drawn as SVG by the template widget, because the standard chart widget would place the\n// simulated timestamps on the real-time axis. Here the axis is a 24 h window of simulated UTC time.\nif (ref != null) {\n  const bucket = Math.floor(ref / CFG.STEP);\n  if (flow.get(\"lastBucket\") !== bucket) {\n    flow.set(\"lastBucket\", bucket);\n    const v = { Total: tot.pct };\n    for (const z of zoneArr) v[\"Zone \" + z.zone] = z.pct;\n    hist.push({ t: bucket * CFG.STEP, v });\n    if (hist.length > 2000) hist.shift();\n    sendChart = true;\n  }\n}\nflow.set(\"chartHist\", hist);\nif (sendChart) {\n  const names = [...zoneArr.map(z => \"Zone \" + z.zone), \"Total\"];\n  const colors = [\"#1f77b4\", \"#ff7f0e\", \"#9467bd\", \"#8c564b\", \"#2ca02c\"];\n  const W = 900, H = 300, L = 42, R = 14, T = 12, B = 30, HOUR = 3600e3, DAY = 24 * HOUR;\n  let start = hist.length ? Math.floor(hist[0].t / HOUR) * HOUR : 0;\n  if (hist.length && hist[hist.length - 1].t > start + DAY) start = Math.ceil((hist[hist.length - 1].t - DAY) / HOUR) * HOUR;\n  const X = t => L + (t - start) / DAY * (W - L - R);\n  const Y = p => T + (100 - p) / 100 * (H - T - B);\n  const pts = hist.filter(h => h.t >= start);\n  const lines = hist.length ? names.map((n, i) => ({\n    name: n, color: n === \"Total\" ? \"#2ca02c\" : colors[i % 3], width: n === \"Total\" ? 2.6 : 1.8,\n    dash: n === \"Total\" ? \"6 3\" : \"\",\n    points: pts.map(h => X(h.t).toFixed(1) + \",\" + Y(h.v[n] || 0).toFixed(1)).join(\" \"),\n    last: pts.length ? pts[pts.length - 1].v[n] : 0 })) : [];\n  const xticks = [], yticks = [];\n  if (hist.length) for (let t = start; t <= start + DAY; t += 2 * HOUR)\n    xticks.push({ x: r1(X(t)), label: new Date(t).toISOString().slice(11, 16) });\n  for (const p of [0, 25, 50, 75, 100]) yticks.push({ y: r1(Y(p)), label: p + \"\" });\n  chart.push({ topic: \"chart\", payload: { W, H, L, R, T, B, lines, xticks, yticks, empty: !hist.length,\n                                           day: hist.length ? new Date(start).toISOString().slice(0, 10) : \"\" } });\n}\n\n// ---- 6) snapshot for the dashboard ----\n// display order: zone alarms first, then message errors, gateway, offline sensors, \"almost full\", batteries\nconst rank = k => k.startsWith(\"zone_full\") ? 0 : k === \"error_rate\" ? 1 : k === \"gateway\" ? 2 : k.startsWith(\"offline\") ? 3\n                  : k.startsWith(\"zone_almost\") ? 4 : 5;\nconst snapshot = {\n  simTime: ref != null ? fmt(ref) : \"-\",\n  gateway, zones: zoneArr, total: tot, spots: spotList,\n  stats: { turnedAway: simStats.turnedAway, avgStay: dur.n ? r1(dur.sum / dur.n) : 0, stays: dur.n, avgSim: simStats.avgSim },\n  counters: { valid: cnt.valid, rejected: cnt.rejected, flickers: cnt.flickers, byReason: cnt.byReason,\n              winBad, winTot, winRate },\n  rejected: (flow.get(\"rejected\") || []).slice(0, 15),\n  alarms: Object.values(active).sort((a, b) => (rank(a.key) - rank(b.key)) || a.key.localeCompare(b.key)),\n  alarmLog: log.slice(0, 15)\n};\nreturn [{ topic: \"snapshot\", payload: snapshot }, events, chart];\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1500,
+    "y": 340,
+    "wires": [
+      [
+        "rate"
+      ],
+      [
+        "toast_fn"
+      ],
+      [
+        "w_chart"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "rate",
+    "type": "delay",
+    "name": "max 2 updates/s",
+    "pauseType": "rate",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "2",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": true,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 1760,
+    "y": 340,
+    "wires": [
+      [
+        "w_kpi",
+        "w_spots",
+        "w_alarms",
+        "w_rejected"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "toast_fn",
+    "type": "function",
+    "name": "alarm -> toast + MQTT",
+    "func": "// ---- Configuration: flow-level environment variables (Flow properties -> Environment Variables) ----\nconst CFG = {\n  PREFIX:   env.get(\"TOPIC_PREFIX\") || \"uniwa/iot/ice26390276/parking\",\n  ZONES:    (env.get(\"KNOWN_ZONES\") || \"A,B\").split(\",\").map(z => z.trim()).filter(Boolean),\n  PER_ZONE: Number(env.get(\"SPOTS_PER_ZONE\") || 10),\n  HB_SEC:   Number(env.get(\"HEARTBEAT_INTERVAL_SEC\") || 60),      // heartbeat period (simulated seconds)\n  OFFLINE_N:Number(env.get(\"OFFLINE_INTERVALS\") || 3),            // missed heartbeats => sensor offline\n  BATT_LOW: Number(env.get(\"BATTERY_LOW_PCT\") || 15),\n  FULL:     Number(env.get(\"ZONE_FULL_PCT\") || 100),\n  ALMOST:   Number(env.get(\"ZONE_ALMOST_FULL_PCT\") || 90),\n  ERR_PCT:  Number(env.get(\"ERROR_RATE_PCT\") || 10),\n  ERR_WIN:  Number(env.get(\"ERROR_WINDOW_SEC\") || 60) * 1000,\n  ERR_MIN:  Number(env.get(\"ERROR_MIN_MSGS\") || 10),              // min. messages in window before the rate counts\n  FLICKER:  Number(env.get(\"FLICKER_SEC\") || 10) * 1000,          // reversal within N s => flicker\n  HOLD:     Number(env.get(\"FLICKER_HOLD_MS\") || 1000),           // real-time debounce of state changes\n  FUT:      Number(env.get(\"TS_FUTURE_TOL_SEC\") || 120) * 1000,\n  AGE:      Number(env.get(\"TS_MAX_AGE_SEC\") || 600) * 1000,\n  ALARM_HOLD: Number(env.get(\"ALARM_HOLD_SEC\") || 8) * 1000,     // keep a cleared alarm visible for N real seconds\n  STEP:     Number(env.get(\"CHART_STEP_SEC\") || 300) * 1000,\n  WALL:     (env.get(\"TIME_MODE\") || \"sim\") === \"wall\"            // \"sim\": timestamps are simulated time\n};\nconst newSpot = (id, zone) => ({ id, zone, occupied: null, since: null, battery: null,\n                                  lastHbSim: null, lastChangeSim: null, offline: false });\n\n// Alarm event -> dashboard toast (output 1) and MQTT <prefix>/alarms (output 2).\nconst raised = msg.event === \"RAISED\";\nconst colors = { critical: \"#c62828\", warning: \"#ef6c00\", ok: \"#2e7d32\" };\nconst toast = {\n  topic: raised ? (msg.sev === \"critical\" ? \"ALARM\" : \"WARNING\") : \"RESOLVED\",\n  payload: msg.text,\n  highlight: raised ? colors[msg.sev] : colors.ok,\n  displayTime: raised ? 10 : 4\n};\nconst mqttMsg = {\n  topic: CFG.PREFIX + \"/alarms\", qos: 1, retain: false,\n  payload: JSON.stringify({ event: msg.event, key: msg.key, severity: msg.sev, text: msg.text, sim_time: msg.sim })\n};\nreturn [toast, mqttMsg];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1760,
+    "y": 440,
+    "wires": [
+      [
+        "w_toast"
+      ],
+      [
+        "out_alarms"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "out_alarms",
+    "type": "mqtt out",
+    "name": "<prefix>/alarms",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker",
+    "x": 2000,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "cfg_ui_base",
+    "type": "ui_base",
+    "theme": {
+      "name": "theme-light",
+      "lightTheme": {
+        "default": "#0094CE",
+        "baseColor": "#0094CE",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": true,
+        "reset": false
+      },
+      "darkTheme": {
+        "default": "#097479",
+        "baseColor": "#097479",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": false
+      },
+      "customTheme": {
+        "name": "Untitled Theme 1",
+        "default": "#4B7930",
+        "baseColor": "#4B7930",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+      },
+      "themeState": {
+        "base-color": {
+          "default": "#0094CE",
+          "value": "#0094CE",
+          "edited": false
+        },
+        "page-titlebar-backgroundColor": {
+          "value": "#0094CE",
+          "edited": false
+        },
+        "page-backgroundColor": {
+          "value": "#fafafa",
+          "edited": false
+        },
+        "page-sidebar-backgroundColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "group-textColor": {
+          "value": "#1bbfff",
+          "edited": false
+        },
+        "group-borderColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "group-backgroundColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "widget-textColor": {
+          "value": "#111111",
+          "edited": false
+        },
+        "widget-backgroundColor": {
+          "value": "#0094ce",
+          "edited": false
+        },
+        "widget-borderColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "base-font": {
+          "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+        }
+      },
+      "angularTheme": {
+        "primary": "indigo",
+        "accents": "blue",
+        "warn": "red",
+        "background": "grey",
+        "palette": "light"
+      }
+    },
+    "site": {
+      "name": "Smart Parking Dashboard - ice26390276",
+      "hideToolbar": "false",
+      "allowSwipe": "false",
+      "lockMenu": "false",
+      "allowTempTheme": "true",
+      "dateFormat": "DD/MM/YYYY",
+      "sizes": {
+        "sx": 48,
+        "sy": 48,
+        "gx": 6,
+        "gy": 6,
+        "cx": 6,
+        "cy": 6,
+        "px": 0,
+        "py": 0
+      }
+    }
+  },
+  {
+    "id": "cfg_ui_tab",
+    "type": "ui_tab",
+    "name": "Smart Parking - ice26390276",
+    "icon": "dashboard",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "g_over",
+    "type": "ui_group",
+    "name": "Overview",
+    "tab": "cfg_ui_tab",
+    "order": 1,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "g_chart",
+    "type": "ui_group",
+    "name": "Occupancy over time (simulated UTC)",
+    "tab": "cfg_ui_tab",
+    "order": 2,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "g_spots",
+    "type": "ui_group",
+    "name": "Parking spots",
+    "tab": "cfg_ui_tab",
+    "order": 3,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "g_alarm",
+    "type": "ui_group",
+    "name": "Alarms",
+    "tab": "cfg_ui_tab",
+    "order": 4,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "g_valid",
+    "type": "ui_group",
+    "name": "Message validation",
+    "tab": "cfg_ui_tab",
+    "order": 5,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_kpi",
+    "type": "ui_template",
+    "name": "KPI cards",
+    "group": "g_over",
+    "order": 1,
+    "width": "12",
+    "height": "5",
+    "format": "<style>\n  .sp-top { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:#555; margin-bottom:8px; }\n  .sp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }\n  .sp-kpi { border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fafafa; }\n  .sp-kpi .t { font-size:12px; color:#666; }\n  .sp-kpi .v { font-size:26px; font-weight:600; line-height:1.2; }\n  .sp-kpi .s { font-size:12px; color:#777; }\n  .sp-bar { height:6px; border-radius:3px; background:#e0e0e0; overflow:hidden; margin-top:6px; }\n  .sp-bar > i { display:block; height:100%; background:#2e7d32; }\n  .sp-bar.hi > i { background:#ef6c00; } .sp-bar.full > i { background:#c62828; }\n  .sp-ok { color:#2e7d32; } .sp-bad { color:#c62828; }\n</style>\n<div ng-if=\"msg.payload\">\n  <div class=\"sp-top\">\n    <span>Simulated time (UTC): <b>{{msg.payload.simTime}}</b></span>\n    <span>Simulator:\n      <b ng-class=\"msg.payload.gateway=='online' ? 'sp-ok' : (msg.payload.gateway=='offline' ? 'sp-bad' : '')\">{{msg.payload.gateway}}</b></span>\n  </div>\n  <div class=\"sp-grid\">\n    <div class=\"sp-kpi\" ng-repeat=\"z in msg.payload.zones\">\n      <div class=\"t\">Zone {{z.zone}} - free spots</div>\n      <div class=\"v\">{{z.free}} <small style=\"font-size:14px;color:#777\">/ {{z.total}}</small></div>\n      <div class=\"s\">occupancy {{z.pct | number:0}} % <span ng-if=\"z.offline\">&middot; {{z.offline}} offline</span></div>\n      <div class=\"sp-bar\" ng-class=\"{hi: z.pct > 90, full: z.pct >= 100}\"><i ng-style=\"{width: z.pct + '%'}\"></i></div>\n    </div>\n    <div class=\"sp-kpi\">\n      <div class=\"t\">Total - free spots</div>\n      <div class=\"v\">{{msg.payload.total.free}} <small style=\"font-size:14px;color:#777\">/ {{msg.payload.total.total}}</small></div>\n      <div class=\"s\">occupancy {{msg.payload.total.pct | number:0}} % <span ng-if=\"msg.payload.total.offline\">&middot; {{msg.payload.total.offline}} offline</span></div>\n      <div class=\"sp-bar\" ng-class=\"{hi: msg.payload.total.pct > 90, full: msg.payload.total.pct >= 100}\"><i ng-style=\"{width: msg.payload.total.pct + '%'}\"></i></div>\n    </div>\n    <div class=\"sp-kpi\">\n      <div class=\"t\">Average parking duration</div>\n      <div class=\"v\">{{msg.payload.stats.avgStay | number:1}} <small style=\"font-size:14px;color:#777\">min</small></div>\n      <div class=\"s\">{{msg.payload.stats.stays}} completed stays</div>\n    </div>\n    <div class=\"sp-kpi\">\n      <div class=\"t\">Cars turned away</div>\n      <div class=\"v\" ng-class=\"{'sp-bad': msg.payload.stats.turnedAway > 0}\">{{msg.payload.stats.turnedAway}}</div>\n      <div class=\"s\">parking was full</div>\n    </div>\n    <div class=\"sp-kpi\">\n      <div class=\"t\">Valid messages</div>\n      <div class=\"v sp-ok\">{{msg.payload.counters.valid}}</div>\n      <div class=\"s\">{{msg.payload.counters.flickers}} flickers ignored</div>\n    </div>\n    <div class=\"sp-kpi\">\n      <div class=\"t\">Rejected messages</div>\n      <div class=\"v\" ng-class=\"{'sp-bad': msg.payload.counters.rejected > 0}\">{{msg.payload.counters.rejected}}</div>\n      <div class=\"s\">last minute: {{msg.payload.counters.winRate | number:1}} % invalid</div>\n    </div>\n  </div>\n</div>\n",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 2020,
+    "y": 260,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_spots",
+    "type": "ui_template",
+    "name": "Spot map",
+    "group": "g_spots",
+    "order": 1,
+    "width": "12",
+    "height": "7",
+    "format": "<style>\n  .sp-zone { margin-bottom:10px; }\n  .sp-zt { font-weight:600; margin-bottom:6px; }\n  .sp-tiles { display:flex; flex-wrap:wrap; gap:8px; }\n  .sp-tile { width:88px; border-radius:8px; padding:6px 4px; text-align:center; color:#fff; font-size:15px; font-weight:600; }\n  .sp-tile small { display:block; font-weight:400; font-size:11px; opacity:.95; }\n  .sp-tile.free { background:#2e7d32; } .sp-tile.occupied { background:#c62828; }\n  .sp-tile.unknown { background:#9e9e9e; }\n  .sp-tile.offline { background:repeating-linear-gradient(45deg,#616161,#616161 6px,#757575 6px,#757575 12px); }\n  .sp-tile.lowb { outline:3px solid #ffb300; }\n</style>\n<div ng-repeat=\"z in msg.payload.zones\" class=\"sp-zone\">\n  <div class=\"sp-zt\">Zone {{z.zone}} &mdash; {{z.free}} free, {{z.occupied}} occupied, {{z.offline}} offline</div>\n  <div class=\"sp-tiles\">\n    <div class=\"sp-tile\" ng-repeat=\"s in msg.payload.spots | filter:{zone:z.zone}:true\"\n         ng-class=\"[s.state, (s.battery !== null && s.battery < 15) ? 'lowb' : '']\">\n      {{s.id}}<small>{{s.state}}</small><small ng-if=\"s.battery !== null\">battery {{s.battery | number:0}} %</small>\n    </div>\n  </div>\n</div>\n",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 2020,
+    "y": 320,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_alarms",
+    "type": "ui_template",
+    "name": "Active alarms",
+    "group": "g_alarm",
+    "order": 1,
+    "width": "12",
+    "height": "9",
+    "format": "<style>\n  .al-none { color:#2e7d32; font-weight:600; padding:4px 0; }\n  .al-row { padding:6px 10px; border-radius:6px; margin-bottom:5px; color:#fff; font-size:14px; }\n  .al-row.critical { background:#c62828; } .al-row.warning { background:#ef6c00; }\n  .al-row small { opacity:.9; }\n  .al-log { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }\n  .al-log td { padding:3px 6px; border-bottom:1px solid #eee; }\n  .al-log .RAISED { color:#c62828; font-weight:600; } .al-log .CLEARED { color:#2e7d32; font-weight:600; }\n</style>\n<div ng-if=\"msg.payload\" style=\"max-height:470px;overflow-y:auto\">\n  <div class=\"al-none\" ng-if=\"!msg.payload.alarms.length\">No active alarms</div>\n  <div class=\"al-row\" ng-class=\"a.sev\" ng-repeat=\"a in msg.payload.alarms\">\n    <b>{{a.sev == 'critical' ? 'ALARM' : 'WARNING'}}</b> &nbsp; {{a.text}} <small>&nbsp; (since {{a.since}})</small>\n  </div>\n  <div style=\"font-size:12px;color:#666;margin-top:8px\" ng-if=\"msg.payload.alarmLog.length\">Alarm history (latest first)</div>\n  <table class=\"al-log\">\n    <tr ng-repeat=\"l in msg.payload.alarmLog\"><td>{{l.time}}</td><td ng-class=\"l.event\">{{l.event}}</td><td>{{l.text}}</td></tr>\n  </table>\n</div>\n",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 2020,
+    "y": 380,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_rejected",
+    "type": "ui_template",
+    "name": "Rejected messages",
+    "group": "g_valid",
+    "order": 1,
+    "width": "12",
+    "height": "10",
+    "format": "<style>\n  .rj-sum { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; font-size:12px; }\n  .rj-chip { background:#fdecea; color:#b71c1c; border-radius:12px; padding:2px 10px; }\n  .rj-tab { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }\n  .rj-tab th { text-align:left; border-bottom:2px solid #ddd; padding:4px 6px; color:#555; }\n  .rj-tab td { padding:3px 6px; border-bottom:1px solid #eee; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n  .rj-tab td.r { font-weight:600; color:#c62828; }\n</style>\n<div ng-if=\"msg.payload\" style=\"max-height:540px;overflow-y:auto\">\n  <div class=\"rj-sum\">\n    <span><b>{{msg.payload.counters.valid}}</b> valid</span>\n    <span><b>{{msg.payload.counters.rejected}}</b> rejected</span>\n    <span class=\"rj-chip\" ng-repeat=\"(k, n) in msg.payload.counters.byReason\">{{k}}: {{n}}</span>\n  </div>\n  <table class=\"rj-tab\">\n    <colgroup><col style=\"width:10%\"><col style=\"width:15%\"><col style=\"width:15%\"><col style=\"width:26%\"><col style=\"width:34%\"></colgroup>\n    <tr><th>Sim. time</th><th>Reason</th><th>Topic</th><th>Detail</th><th>Payload</th></tr>\n    <tr ng-repeat=\"r in msg.payload.rejected\" title=\"{{r.payload}}\">\n      <td>{{r.sim.slice(11)}}</td><td class=\"r\">{{r.reason}}</td>\n      <td>{{r.topic.split('/').slice(-3).join('/')}}</td><td>{{r.detail}}</td><td>{{r.payload}}</td>\n    </tr>\n  </table>\n  <div ng-if=\"!msg.payload.rejected.length\" style=\"color:#777;font-size:13px\">No rejected messages yet.</div>\n</div>\n",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 2020,
+    "y": 440,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_chart",
+    "type": "ui_template",
+    "name": "Occupancy chart",
+    "group": "g_chart",
+    "order": 1,
+    "width": "12",
+    "height": "7",
+    "format": "<style>\n  .ch-legend { display:flex; flex-wrap:wrap; gap:18px; font-size:13px; margin:2px 0 4px 42px; }\n  .ch-legend i { display:inline-block; width:22px; height:4px; margin-right:6px; vertical-align:middle; border-radius:2px; }\n  .ch-svg text { font-size:11px; fill:#666; font-family:inherit; }\n  .ch-empty { color:#888; font-size:13px; padding:20px 0; text-align:center; }\n</style>\n<div ng-if=\"msg.payload\">\n  <div class=\"ch-legend\">\n    <span ng-repeat=\"l in msg.payload.lines\"><i ng-style=\"{background:l.color}\"></i>{{l.name}}: <b>{{l.last | number:0}} %</b></span>\n    <span style=\"color:#888\" ng-if=\"msg.payload.day\">Simulated day {{msg.payload.day}} (UTC)</span>\n  </div>\n  <div class=\"ch-empty\" ng-if=\"msg.payload.empty\">Waiting for data...</div>\n  <svg class=\"ch-svg\" viewBox=\"0 0 900 300\" style=\"width:100%;height:auto;display:block\" ng-if=\"!msg.payload.empty\">\n    <g ng-repeat=\"y in msg.payload.yticks\">\n      <line ng-attr-x1=\"{{msg.payload.L}}\" ng-attr-x2=\"{{msg.payload.W - msg.payload.R}}\" ng-attr-y1=\"{{y.y}}\" ng-attr-y2=\"{{y.y}}\" stroke=\"#e3e3e3\" stroke-width=\"1\"></line>\n      <text ng-attr-x=\"{{msg.payload.L - 6}}\" ng-attr-y=\"{{y.y + 4}}\" text-anchor=\"end\">{{y.label}}</text>\n    </g>\n    <g ng-repeat=\"x in msg.payload.xticks\">\n      <line ng-attr-x1=\"{{x.x}}\" ng-attr-x2=\"{{x.x}}\" ng-attr-y1=\"{{msg.payload.T}}\" ng-attr-y2=\"{{msg.payload.H - msg.payload.B}}\" stroke=\"#f0f0f0\" stroke-width=\"1\"></line>\n      <text ng-attr-x=\"{{x.x}}\" ng-attr-y=\"{{msg.payload.H - 10}}\" text-anchor=\"middle\">{{x.label}}</text>\n    </g>\n    <polyline ng-repeat=\"l in msg.payload.lines\" ng-attr-points=\"{{l.points}}\" fill=\"none\" ng-attr-stroke=\"{{l.color}}\"\n              ng-attr-stroke-width=\"{{l.width}}\" ng-attr-stroke-dasharray=\"{{l.dash}}\" stroke-linejoin=\"round\"></polyline>\n  </svg>\n</div>\n",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 2020,
+    "y": 560,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "w_toast",
+    "type": "ui_toast",
+    "position": "top right",
+    "displayTime": "8",
+    "highlight": "",
+    "sendall": true,
+    "outputs": 0,
+    "ok": "OK",
+    "cancel": "",
+    "raw": false,
+    "className": "",
+    "topic": "",
+    "name": "alarm toast",
+    "x": 2010,
+    "y": 400,
+    "wires": []
+  }
+]

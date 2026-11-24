@@ -1,0 +1,15 @@
+1795270265: New connection from 172.18.0.3:56832 on port 1883.
+1795270265: New client connected from 172.18.0.3:56832 as nodered998b191d52c5b2a8 (p4, c1, k60).
+1795270971: New connection from 172.18.0.1:46214 on port 1883.
+1795270971: New client connected from 172.18.0.1:46214 as auto-87C6F6FA-CA8E-80FF-A4AD-EF924344DBCF (p4, c1, k60).
+1795271163: Client auto-87C6F6FA-CA8E-80FF-A4AD-EF924344DBCF [172.18.0.1:46214] disconnected.
+1795283148: New connection from 172.18.0.1:43022 on port 1883.
+1795283148: New client connected from 172.18.0.1:43022 as auto-AF627ABA-E008-DF68-600B-CA473E71A8AC (p4, c1, k60).
+1795283179: Client auto-AF627ABA-E008-DF68-600B-CA473E71A8AC [172.18.0.1:43022] disconnected.
+1795285120: New connection from 172.18.0.1:46422 on port 1883.
+1795285120: New client connected from 172.18.0.1:46422 as auto-578B7239-7315-6E76-1828-091D657361F0 (p4, c1, k60).
+1795285136: Client auto-578B7239-7315-6E76-1828-091D657361F0 [172.18.0.1:46422] disconnected.
+1795376492: Client nodered998b191d52c5b2a8 [172.18.0.3:56832] disconnected.
+1795547753: New connection from 172.18.0.3:39368 on port 1883.
+1795547753: New client connected from 172.18.0.3:39368 as nodered65f4f4d7c229c449 (p4, c1, k60).
+1795547899: Client nodered65f4f4d7c229c449 [172.18.0.3:39368] disconnected.

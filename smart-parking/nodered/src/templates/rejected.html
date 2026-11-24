@@ -1,0 +1,24 @@
+<style>
+  .rj-sum { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; font-size:12px; }
+  .rj-chip { background:#fdecea; color:#b71c1c; border-radius:12px; padding:2px 10px; }
+  .rj-tab { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
+  .rj-tab th { text-align:left; border-bottom:2px solid #ddd; padding:4px 6px; color:#555; }
+  .rj-tab td { padding:3px 6px; border-bottom:1px solid #eee; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rj-tab td.r { font-weight:600; color:#c62828; }
+</style>
+<div ng-if="msg.payload" style="max-height:540px;overflow-y:auto">
+  <div class="rj-sum">
+    <span><b>{{msg.payload.counters.valid}}</b> valid</span>
+    <span><b>{{msg.payload.counters.rejected}}</b> rejected</span>
+    <span class="rj-chip" ng-repeat="(k, n) in msg.payload.counters.byReason">{{k}}: {{n}}</span>
+  </div>
+  <table class="rj-tab">
+    <colgroup><col style="width:10%"><col style="width:15%"><col style="width:15%"><col style="width:26%"><col style="width:34%"></colgroup>
+    <tr><th>Sim. time</th><th>Reason</th><th>Topic</th><th>Detail</th><th>Payload</th></tr>
+    <tr ng-repeat="r in msg.payload.rejected" title="{{r.payload}}">
+      <td>{{r.sim.slice(11)}}</td><td class="r">{{r.reason}}</td>
+      <td>{{r.topic.split('/').slice(-3).join('/')}}</td><td>{{r.detail}}</td><td>{{r.payload}}</td>
+    </tr>
+  </table>
+  <div ng-if="!msg.payload.rejected.length" style="color:#777;font-size:13px">No rejected messages yet.</div>
+</div>
