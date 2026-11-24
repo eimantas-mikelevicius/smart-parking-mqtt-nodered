@@ -11,15 +11,15 @@ services:
     restart: unless-stopped
 
   nodered:
-    build: ./nodered          # nodered/node-red + node-red-dashboard
+    build: ./nodered          
     container_name: smart-parking-nodered
     ports:
       - "1880:1880"
     environment:
       - TZ=UTC
-      - MQTT_HOST=mosquitto   # broker host used by the MQTT nodes in flows.json
+      - MQTT_HOST=mosquitto   
     volumes:
-      - ./nodered/data:/data  # flows.json ir kontekstas išlieka perkrovus
+      - ./nodered/data:/data  
     depends_on:
       - mosquitto
     restart: unless-stopped

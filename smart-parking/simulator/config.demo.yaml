@@ -3,14 +3,14 @@ broker:
   port: 1883
 
 parking:
-  total_spots: 24        # 12 vietų zonoje -> 11/12 = 91.7 % > 90 % ("almost full" aliarmas)
-  zones: ["A", "B"]      # Zonos (reikalaujama >= 2)
-  speed_factor: 60.0     # 1 reali sekundė = 60 simuliuotų sekundžių (1 minutė)
-  fault_probability: 0.05 # 5% tikimybė sugeneruoti sugadintą žinutę testavimui
+  total_spots: 24        
+  zones: ["A", "B"]      
+  speed_factor: 60.0     
+  fault_probability: 0.05 
   seed: "ice26390276@uniwa.gr"
   topic_prefix: "uniwa/iot/ice26390276/parking"
 
-  # --- demo knobs, only read by simulator_demo.py ---
-  arrival_multiplier: 2.5        # more cars  -> zones fill up, cars get turned away
-  duration_multiplier: 2.5       # longer stays
-  battery_drain_multiplier: 2.0  # first batteries drop below 15 % after ~15 simulated hours
+  
+  arrival_multiplier: 2.5        
+  duration_multiplier: 2.5       
+  battery_drain_multiplier: 2.0  

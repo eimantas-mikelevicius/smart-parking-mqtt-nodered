@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""Demo helper: publish a burst of INVALID sensor messages so that every rejection reason and the
-"more than 10 % invalid messages in the last minute" alarm can be shown (screenshots for the report).
-
-Usage (from the project root, while the simulator and Node-RED are running):
-    python tools/fault_burst.py            # 15 invalid messages
-    python tools/fault_burst.py 40         # 40 invalid messages
-"""
 import json
 import sys
 import time

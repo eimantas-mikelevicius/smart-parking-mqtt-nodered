@@ -3,11 +3,11 @@ broker:
   port: 1883
 
 parking:
-  total_spots: 24        # Vietų skaičius (reikalaujama >= 20)
+  total_spots: 24        
   spots_per_zone: 12
-  zones: ["A", "B"]      # Zonos (reikalaujama >= 2)
-  speed_factor: 60.0     # 1 reali sekundė = 60 simuliuotų sekundžių (1 minutė)
-  fault_probability: 0.05 # 5% tikimybė sugeneruoti sugadintą žinutę testavimui
+  zones: ["A", "B"]      
+  speed_factor: 60.0     
+  fault_probability: 0.05 #
   seed: "ice26390276@uniwa.gr"
   topic_prefix: "uniwa/iot/ice26390276/parking"
   arrival_multiplier: 2.5
